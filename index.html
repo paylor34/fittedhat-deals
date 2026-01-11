@@ -5,72 +5,102 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Discounted New Era Fitted Hats</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .hat { border: 1px solid #ddd; margin: 20px 0; padding: 15px; border-radius: 8px; display: flex; align-items: flex-start; }
-        .hat img { width: 150px; height: 150px; object-fit: cover; margin-right: 20px; border-radius: 4px; cursor: pointer; }
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f4f4; }
+        .hat { background: white; border: 1px solid #ddd; margin: 20px 0; padding: 15px; border-radius: 8px; display: flex; align-items: flex-start; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        /* Make image container clickable and responsive */
+        .hat-image-link { display: block; flex-shrink: 0; margin-right: 20px; }
+        .hat img { width: 150px; height: 150px; object-fit: cover; border-radius: 4px; cursor: pointer; transition: transform 0.2s; }
+        .hat img:hover { transform: scale(1.03); }
+
         .hat-info { flex: 1; }
-        .price { font-size: 1.2em; color: green; }
-        .orig-price { text-decoration: line-through; color: gray; }
-        button { background: #007bff; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; }
+        .price { font-size: 1.2em; color: #27ae60; font-weight: bold; margin: 5px 0; }
+        .orig-price { text-decoration: line-through; color: gray; font-size: 0.9em; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        
         .disclaimer { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin-bottom: 20px; border-radius: 8px; font-size: 0.95em; }
-        .loading { text-align: center; padding: 20px; color: #666; }
+        .loading { text-align: center; padding: 40px; color: #666; font-style: italic; }
     </style>
 </head>
 <body>
+
     <h1>Discounted New Era Fitted Hats</h1>
     <div class="disclaimer">
-        <strong>Disclaimer</strong> - I have included some "affiliate links" below and may receive a small portion of any sale. This will be used to improve this site. Thank you for your support!
+        <strong>Disclaimer:</strong> I have included some affiliate links below and may receive a small portion of any sale. This helps support the site!
     </div>
+
     <div id="deals"></div>
-    <div id="loading" class="loading" style="display:none;">Loading more deals...</div>
+    <div id="loading" class="loading">Scroll down for more deals...</div>
+
     <script>
-        let hats = []; // Load from feed: https://your-affiliate-feed-url.txt?aff_id=YOUR_ID
+        let hats = []; 
         let page = 0;
         const hatsPerPage = 3;
+        let isLoading = false; // Flag to prevent multiple triggers
 
-        // Mock data - REPLACE with fetch('YOUR_FEED_URL') then parse CSV/JSON for name,link,img,price
         const mockHats = [
-            { name: 'Houston Astros Houndstooth 59FIFTY', price: '$20', orig: '$49.99', link: 'https://warehouse.neweracap.com/collections/all-fitteds-sale?utm_source=your_site&aff_id=YOUR_AFFILIATE_ID', img: 'https://warehouse.neweracap.com/cdn/shop/files/Houston_Astros_Houndstooth_59FIFTY_Fitted_1_360x.jpg?v=1734510000' },
-            { name: 'New Era Astros 940M Crown', price: '$14.99', orig: '$33', link: 'https://www.fanatics.com/.../astros-hat/o-4521+t-14441929+p-79886461383+z-9-3402473091', img: 'https://images.fanatics.com/fanatics/4521-79886461383?t=MLB?$pdp-thumb$' },
-            { name: 'Notre Dame Rose Bowl Patch', price: '$29.98', orig: '$60', link: 'https://www.hatclub.com/products/rose-bowl-2tone-notre-dame-wht-nvy?utm_source=your_site&aff_id=YOUR_AFFILIATE_ID', img: 'https://www.hatclub.com/cdn/shop/files/ND47100_1_360x.jpg?v=1705540000' },
-            // Add 100s more from feed...
+            { name: 'Houston Astros Houndstooth 59FIFTY', price: '$20', orig: '$49.99', link: '#', img: 'https://warehouse.neweracap.com/cdn/shop/files/Houston_Astros_Houndstooth_59FIFTY_Fitted_1_360x.jpg?v=1734510000' },
+            { name: 'New Era Astros 940M Crown', price: '$14.99', orig: '$33', link: '#', img: 'https://images.fanatics.com/fanatics/4521-79886461383?t=MLB?$pdp-thumb$' },
+            { name: 'Notre Dame Rose Bowl Patch', price: '$29.98', orig: '$60', link: '#', img: 'https://www.hatclub.com/cdn/shop/files/ND47100_1_360x.jpg?v=1705540000' },
+            { name: 'LA Dodgers Classic Blue', price: '$25', orig: '$45', link: '#', img: 'https://images.fanatics.com/fanatics/1234-5678?t=MLB' },
+            { name: 'NY Yankees Gold Trim', price: '$35', orig: '$55', link: '#', img: 'https://images.fanatics.com/fanatics/8765-4321?t=MLB' }
         ];
 
-        function renderHats(start) {
+        function renderHats(pageNum) {
+            const start = pageNum * hatsPerPage;
             const end = start + hatsPerPage;
-            hats.slice(start, end).forEach(hat => {
-                document.getElementById('deals').innerHTML += `
+            const subset = hats.slice(start, end);
+            
+            if (subset.length === 0) {
+                document.getElementById('loading').innerText = "No more deals found!";
+                return;
+            }
+
+            const dealsContainer = document.getElementById('deals');
+            subset.forEach(hat => {
+                const hatHtml = `
                     <div class="hat">
-                        <a href="${hat.link}" target="_blank">
-                            <img src="${hat.img}" alt="${hat.name}" loading="lazy">
+                        <a href="${hat.link}" target="_blank" class="hat-image-link">
+                            <img src="${hat.img}" alt="${hat.name}" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
                         </a>
                         <div class="hat-info">
                             <h3>${hat.name}</h3>
-                            <p class="price">${hat.price} (60% off)</p>
+                            <p class="price">${hat.price}</p>
                             <p class="orig-price">${hat.orig}</p>
-                            <a href="${hat.link}" target="_blank"><button>Buy Now (Affiliate)</button></a>
+                            <a href="${hat.link}" target="_blank">
+                                <button>Buy Now (Affiliate)</button>
+                            </a>
                         </div>
                     </div>
                 `;
+                dealsContainer.insertAdjacentHTML('beforeend', hatHtml);
             });
+            isLoading = false;
         }
 
-        // Load initial + infinite scroll
-        hats = mockHats; // hats = await parseCSV(await fetch('FEED_URL'));
-        renderHats(0);
+        // Initial Load
+        hats = mockHats; 
+        renderHats(page);
 
+        // Infinite Scroll Logic
         window.addEventListener('scroll', () => {
-            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100 && page * hatsPerPage < hats.length) {
-                document.getElementById('loading').style.display = 'block';
-                page++;
-                setTimeout(() => {
-                    renderHats(page * hatsPerPage);
-                    document.getElementById('loading').style.display = 'none';
-                }, 1000);
+            if (isLoading) return;
+
+            // Check if we are near bottom (200px from bottom)
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200) {
+                if ((page + 1) * hatsPerPage < hats.length) {
+                    isLoading = true;
+                    document.getElementById('loading').style.display = 'block';
+                    
+                    // Simulate loading delay
+                    setTimeout(() => {
+                        page++;
+                        renderHats(page);
+                    }, 800);
+                }
             }
         });
-
-        console.log('Infinite feed ready. Get feed from affiliate dashboard.');
     </script>
 </body>
 </html>
