@@ -5,12 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Discounted New Era Fitted Hats</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .hat { border: 1px solid #ddd; margin: 20px 0; padding: 15px; border-radius: 8px; }
-        .price { font-size: 1.2em; color: green; }
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
+        .hat { 
+            background: white; 
+            border: 1px solid #ddd; 
+            margin: 20px 0; 
+            padding: 15px; 
+            border-radius: 8px; 
+            display: flex; /* Flexbox for image next to text */
+            align-items: center;
+        }
+        /* Clickable Image Style */
+        .hat-img-link { flex-shrink: 0; margin-right: 20px; display: block; width: 150px; height: 150px; }
+        .hat-img-link img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; cursor: pointer; }
+        
+        .hat-info { flex: 1; }
+        .price { font-size: 1.2em; color: green; font-weight: bold; }
         .orig-price { text-decoration: line-through; color: gray; }
-        button { background: #007bff; color: white; border: none; padding: 10px; cursor: pointer; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; }
         .disclaimer { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin-bottom: 20px; border-radius: 8px; font-size: 0.95em; }
+        
+        /* Loading trigger style */
+        #sentinel { height: 50px; text-align: center; padding: 20px; color: #666; font-style: italic; }
     </style>
 </head>
 <body>
@@ -18,35 +34,76 @@
     <div class="disclaimer">
         <strong>Disclaimer</strong> - I have included some "affiliate links" below and may receive a small portion of any sale. This will be used to improve this site. Thank you for your support!
     </div>
-    <div id="deals">
-        <div class="hat">
-            <h3>Houston Astros Houndstooth 59FIFTY</h3>
-            <p class="price">$20 (60% off)</p>
-            <p class="orig-price">$49.99</p>
-            <a href="https://warehouse.neweracap.com/collections/all-fitteds-sale?utm_source=your_site&aff_id=YOUR_AFFILIATE_ID" target="_blank">
-                <button>Buy Now (Affiliate)</button>
-            </a>
-        </div>
-        <div class="hat">
-            <h3>New Era Astros 940M Crown</h3>
-            <p class="price">$14.99 (55% off)</p>
-            <p class="orig-price">$33</p>
-            <a href="https://www.footlocker.com/category/sale/new-era.html?utm_source=your_site&aff_id=YOUR_AFFILIATE_ID" target="_blank">
-                <button>Buy Now (Affiliate)</button>
-            </a>
-        </div>
-        <div class="hat">
-            <h3>Notre Dame Rose Bowl Patch</h3>
-            <p class="price">$29.98 (50% off)</p>
-            <p class="orig-price">$60</p>
-            <a href="https://www.hatclub.com/collections/fitted-sale-hats?utm_source=your_site&aff_id=YOUR_AFFILIATE_ID" target="_blank">
-                <button>Buy Now (Affiliate)</button>
-            </a>
-        </div>
-    </div>
+
+    <div id="deals"></div>
+
+    <div id="sentinel">Loading more fire deals...</div>
+
     <script>
-        // Add filter or refresh deals here later
-        console.log('Prototype ready. Add JS for dynamic scraping/deal updates.');
+        let page = 0;
+        let isFetching = false;
+        const dealsContainer = document.getElementById('deals');
+        const sentinel = document.getElementById('sentinel');
+
+        // 1. Function to Render the HTML
+        function renderHats(hatList) {
+            hatList.forEach(hat => {
+                const hatHtml = `
+                    <div class="hat">
+                        <a href="${hat.link}" target="_blank" class="hat-img-link">
+                            <img src="${hat.img}" alt="${hat.name}">
+                        </a>
+                        <div class="hat-info">
+                            <h3>${hat.name}</h3>
+                            <p class="price">${hat.price}</p>
+                            <p class="orig-price">${hat.orig}</p>
+                            <a href="${hat.link}" target="_blank">
+                                <button>Buy Now (Affiliate)</button>
+                            </a>
+                        </div>
+                    </div>
+                `;
+                dealsContainer.insertAdjacentHTML('beforeend', hatHtml);
+            });
+        }
+
+        // 2. Function to Fetch Data from your PHP Proxy
+        async function loadDeals() {
+            if (isFetching) return;
+            isFetching = true;
+
+            try {
+                // Point this to the PHP file we created earlier
+                const response = await fetch(`fetch_hats.php?page=${page}`);
+                const allHats = await response.json();
+
+                // Get a slice of 5 hats for the current "page"
+                const start = page * 5;
+                const chunk = allHats.slice(start, start + 5);
+
+                if (chunk.length > 0) {
+                    renderHats(chunk);
+                    page++;
+                } else {
+                    sentinel.innerHTML = "No more deals found!";
+                    observer.unobserve(sentinel);
+                }
+            } catch (err) {
+                console.error("Fetch failed", err);
+                sentinel.innerHTML = "Check connection or Proxy settings.";
+            } finally {
+                isFetching = false;
+            }
+        }
+
+        // 3. The Intersection Observer Engine
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                loadDeals();
+            }
+        }, { threshold: 0.5 });
+
+        observer.observe(sentinel);
     </script>
 </body>
 </html>
