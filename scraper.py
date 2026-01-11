@@ -1,37 +1,39 @@
 import requests
-from bs4 import BeautifulSoup
 import json
+
+# PASTE YOUR API KEY HERE
+SCRAPERANT_API_KEY = '2407ab718734431687546f9de8597706'
 
 def scrape_hats():
     found_hats = []
     
-    # We use a very common browser header
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
-    }
-
-    # Sites to try
-    # We will try the Warehouse site first as it is usually more open
-    url = "https://warehouse.neweracap.com/collections/all-fitteds-sale"
+    # The store URL we want to scrape
+    target_url = "https://warehouse.neweracap.com/collections/all-fitteds-sale"
     
+    # ScraperAnt API endpoint
+    api_url = f"https://api.scraperant.com/v2/general?url={target_url}&x-api-key={SCRAPERANT_API_KEY}&browser=true"
+
     try:
-        print(f"Attempting to read: {url}")
-        session = requests.Session()
-        res = session.get(url, headers=headers, timeout=15)
+        print("Requesting page via ScraperAnt...")
+        response = requests.get(api_url, timeout=30)
         
-        print(f"Response Code: {res.status_code}")
-        
-        if res.status_code == 200:
-            soup = BeautifulSoup(res.text, 'html.parser')
-            # Look for ANY link that contains "products" to see if we got the page
-            items = soup.find_all('div', class_='product-card')
+        if response.status_code == 200:
+            # ScraperAnt returns the HTML of the page
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(response.text, 'html.parser')
             
-            for item in items[:20]:
+            # Use the specific New Era Warehouse classes we found earlier
+            items = soup.select('.product-card')
+            print(f"Found {len(items)} product containers.")
+
+            for item in items[:25]:
                 try:
-                    name = item.find('div', class_='product-card__title').text.strip()
-                    link = "https://warehouse.neweracap.com" + item.find('a')['href']
-                    img = "https:" + item.find('img')['src'].split('?')[0] # Clean image URL
+                    name = item.select_one('.product-card__title').text.strip()
+                    link_suffix = item.find('a', href=True)['href']
+                    link = "https://warehouse.neweracap.com" + link_suffix
+                    
+                    img_tag = item.find('img')
+                    img = "https:" + img_tag['src'].split('?')[0] if img_tag['src'].startswith('//') else img_tag['src']
                     
                     found_hats.append({
                         "name": name,
@@ -40,31 +42,22 @@ def scrape_hats():
                         "link": link,
                         "img": img
                     })
-                except:
+                except Exception as e:
                     continue
         else:
-            print(f"Blocked by site. Status: {res.status_code}")
+            print(f"ScraperAnt Error: {response.status_code} - {response.text}")
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"System Error: {e}")
 
-    # If we found data, save it!
+    # Save results
     if len(found_hats) > 0:
         with open('hats.json', 'w') as f:
             json.dump(found_hats, f, indent=2)
-        print(f"Successfully saved {len(found_hats)} hats!")
+        print(f"Successfully scraped {len(found_hats)} hats!")
     else:
-        # If blocked, we put one "Error Hat" so you know the script ran but failed
-        error_data = [{
-            "name": "Bot Blocked - Trying to bypass...",
-            "price": "N/A",
-            "orig": "N/A",
-            "link": "#",
-            "img": "https://via.placeholder.com/150?text=Blocked+By+Store"
-        }]
-        with open('hats.json', 'w') as f:
-            json.dump(error_data, f, indent=2)
-        print("No hats found - check logs for block message.")
+        # Keep the existing hats.json if the scrape failed so the site doesn't go blank
+        print("No hats found this run. Keeping old data.")
 
 if __name__ == "__main__":
     scrape_hats()
