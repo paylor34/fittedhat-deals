@@ -5,31 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Discounted New Era Fitted Hats</title>
     <style>
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f0f2f5; }
-        h1 { text-align: center; color: #1c1e21; }
-        
-        /* The Disclaimer Box */
-        .disclaimer { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin-bottom: 20px; border-radius: 8px; font-size: 0.9em; line-height: 1.4; }
-
-        /* Each Hat Row */
-        .hat { background: white; border: 1px solid #ddd; margin: 15px 0; padding: 20px; border-radius: 12px; display: flex; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        
-        /* Image Logic */
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f4f4; }
+        .disclaimer { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin-bottom: 20px; border-radius: 8px; font-size: 0.9em; }
+        .hat { background: white; border: 1px solid #ddd; margin: 15px 0; padding: 20px; border-radius: 12px; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .hat-img-link { flex-shrink: 0; margin-right: 20px; width: 140px; height: 140px; display: block; }
-        .hat img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; cursor: pointer; transition: transform 0.2s; }
-        .hat img:hover { transform: scale(1.05); }
-
-        /* Text & Button Logic */
+        .hat img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; cursor: pointer; }
         .hat-info { flex: 1; }
-        .hat-info h3 { margin: 0 0 10px 0; font-size: 1.1em; color: #333; }
-        .price { font-size: 1.3em; color: #28a745; font-weight: bold; margin: 5px 0; }
+        .price { font-size: 1.3em; color: #28a745; font-weight: bold; }
         .orig-price { text-decoration: line-through; color: #888; font-size: 0.9em; }
-        
-        .buy-button { display: inline-block; background: #007bff; color: white; border: none; padding: 12px 20px; cursor: pointer; border-radius: 6px; font-weight: bold; text-decoration: none; margin-top: 10px; }
-        .buy-button:hover { background: #0056b3; }
-
-        /* Infinite Scroll Loading Area */
-        #sentinel { height: 80px; display: flex; align-items: center; justify-content: center; color: #666; font-weight: bold; }
+        .buy-button { display: inline-block; background: #007bff; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 10px; }
+        #sentinel { height: 100px; display: flex; align-items: center; justify-content: center; color: #666; }
     </style>
 </head>
 <body>
@@ -37,46 +22,46 @@
     <h1>Discounted New Era Fitted Hats</h1>
 
     <div class="disclaimer">
-        <strong>Disclaimer</strong> - I have included some "affiliate links" below and may receive a small portion of any sale. This will be used to improve this site. Thank you for your support!
+        <strong>Disclaimer</strong> - I have included some affiliate links below and may receive a small portion of any sale. Thank you!
     </div>
 
     <div id="deals-list"></div>
-
-    <div id="sentinel">Scroll down for more fire deals...</div>
+    <div id="sentinel">Loading more deals...</div>
 
     <script>
         let allHats = []; 
         let currentPage = 0;
-        const itemsPerPage = 4; // Loads 4 at a time
+        const itemsPerPage = 5; 
         const listContainer = document.getElementById('deals-list');
-        const statusText = document.getElementById('sentinel');
+        const sentinel = document.getElementById('sentinel');
 
-        // 1. Fetch the data from your hats.json file
+        // This function fetches your JSON file directly from GitHub
         async function startApp() {
             try {
+                // IMPORTANT: This looks for the hats.json file in your repository
                 const response = await fetch('hats.json');
+                if (!response.ok) throw new Error("File not found");
+                
                 allHats = await response.json();
-                renderNextBatch(); // Load the first set immediately
+                renderNextBatch(); 
             } catch (err) {
-                console.error("Error loading JSON:", err);
-                statusText.innerHTML = "Error loading hats.json. Make sure the file exists!";
+                console.error(err);
+                sentinel.innerHTML = "Error: Could not find hats.json. Please make sure you created that file!";
             }
         }
 
-        // 2. Function to put hats on the screen
         function renderNextBatch() {
             const start = currentPage * itemsPerPage;
             const end = start + itemsPerPage;
             const batch = allHats.slice(start, end);
 
             if (batch.length === 0) {
-                statusText.innerHTML = "You've reached the end of the deals!";
-                observer.unobserve(sentinel);
+                sentinel.innerHTML = "No more deals to show!";
                 return;
             }
 
             batch.forEach(hat => {
-                const hatHTML = `
+                const html = `
                     <div class="hat">
                         <a href="${hat.link}" target="_blank" class="hat-img-link">
                             <img src="${hat.img}" alt="${hat.name}">
@@ -85,27 +70,22 @@
                             <h3>${hat.name}</h3>
                             <p class="price">${hat.price}</p>
                             <p class="orig-price">${hat.orig}</p>
-                            <a href="${hat.link}" target="_blank" class="buy-button">Buy Now (Affiliate)</a>
+                            <a href="${hat.link}" target="_blank" class="buy-button">Buy Now</a>
                         </div>
                     </div>
                 `;
-                listContainer.insertAdjacentHTML('beforeend', hatHTML);
+                listContainer.insertAdjacentHTML('beforeend', html);
             });
-
             currentPage++;
         }
 
-        // 3. Setup the "Never Ending" scroll engine
-        const sentinel = document.getElementById('sentinel');
         const observer = new IntersectionObserver((entries) => {
             if (entries[0].isIntersecting && allHats.length > 0) {
                 renderNextBatch();
             }
-        }, { threshold: 0.1 });
+        });
 
         observer.observe(sentinel);
-
-        // Run the app
         startApp();
     </script>
 </body>
