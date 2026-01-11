@@ -83,4 +83,9 @@ def scrape_hats():
         unique_hats = {h['link']: h for h in found_hats}.values()
         with open('hats.json', 'w') as f:
             json.dump(list(unique_hats), f, indent=2)
-        print(f"TOTAL: Saved
+        print(f"TOTAL: Saved {len(unique_hats)} unique hats across all stores.")
+    else:
+        print("Scrape finished but 0 hats found. Check site selectors.")
+
+if __name__ == "__main__":
+    scrape_hats()
